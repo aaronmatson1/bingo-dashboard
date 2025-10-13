@@ -8,6 +8,7 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.3",
     "core-js": "^3.8.3",
     "cors": "^2.8.5",
     "express": "^4.21.1",

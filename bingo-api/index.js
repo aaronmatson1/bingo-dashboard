@@ -1,13 +1,30 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-
-// Enable CORS for all routes and origins (you can restrict to specific origins if needed)
 app.use(cors());
+app.use(express.json());
 
 // Set up initial data
 const allCombos = [];
 const calledCombos = ['FREE']; // Start with "Free Space" as the first combo
+let players = [];
+
+// Fetch all Players
+app.get('/players', (req, res) => {
+  res.json(players);
+});
+
+// Add a new player
+app.post('/players', (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Player name is required' });
+  }
+  const newPlayer = { name, bingos: [false, false, false, false, false], hasBingo: false };
+  players.push(newPlayer);
+  res.status(201).json(newPlayer);
+});
+
 
 // Generate all possible Bingo combinations
 function initializeCombos() {

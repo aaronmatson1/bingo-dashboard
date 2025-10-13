@@ -1,7 +1,7 @@
 <template>
   <div class="BingoBoard">
     <h1>BARNEY FAMILY BINGO BOARD</h1>
-    <p>Press the button to get started</p>
+
   </div>
 </template>
 
@@ -16,7 +16,7 @@
 .BingoBoard h1 {
   font-size: 48px;
   margin-bottom: 20px;
-  /* font-family: 'AnkhSanctuary', sans-serif; */
+  font-family: 'AnkhSanctuary', sans-serif;
   color: #5a3d2b;
 }
 h3 {

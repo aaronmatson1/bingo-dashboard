@@ -7,6 +7,7 @@
 <script>
 import HelloWorld from './components/HelloWorld.vue'
 import BingoDashboard from './components/BingoDashboard.vue'
+import './assets/styles/global.less'
 
 export default {
   name: 'App',
@@ -26,7 +27,12 @@ export default {
   color: #2c3e50;
   margin-top: 60px;
   background-color: #ffecb4;
+  height: 100vh;
 }
+
+/* h2{
+  font-family: 'AnkhSanctuary', sans-serif;
+} */
 
 
 </style>

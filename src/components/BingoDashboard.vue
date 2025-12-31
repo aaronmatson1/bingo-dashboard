@@ -3,7 +3,8 @@
     <!-- Player List and Bingo Trackers -->
     <div class="player-list">
       <h2>Players</h2>
-      <div v-for="(player, index) in players" :key="index" class="player">
+      <div class="name-list">
+        <div v-for="(player, index) in players" :key="index" class="player">
         <span>{{ player.name }}</span>
         <div class="bingo-checkboxes">
           <label v-for="n in 7" :key="n">
@@ -16,43 +17,48 @@
         </div>
         <span v-if="player.bingos.filter(b => b).length === 7">Bingo!</span>
       </div>
+      </div>
       <button @click="addPlayer">Add Player</button>
     </div>
 
 
     <!-- Current Combo in the center -->
-    <div class="current-combo">
-      
-      <h2>Current Combo: <br/><span>{{ formatCombo(currentCombo) }}</span></h2>
-      <button @click="fetchCombo">Call Next Combo</button>
-    </div>
+    <div class="inner-column">
+      <!-- Previous Combo to the right -->
+      <div class="previous-combo">
+        <h3>Previous Combo:<br/>{{ formatCombo(previousCombo) }}</h3>
+      </div>
 
-    <!-- Previous Combo to the right -->
-    <div class="previous-combo">
-      <h3>Previous Combo:<br/>{{ formatCombo(previousCombo) }}</h3>
+      <div class="current-combo">
+        
+        <h2>Current Combo: <br/><span>{{ formatCombo(currentCombo) }}</span></h2>
+      </div>
+
+      <button @click="fetchCombo">Call Next Combo</button>
+
     </div>
 
     <!-- BINGO board -->
     <div class="bingo-board">
       <div class="column">
         <h3>B</h3>
-        <div v-for="combo in sortedBoard.B" :key="combo">{{ formatCombo(combo) }}</div>
+        <div class="bingo-combos" v-for="combo in sortedBoard.B" :key="combo">{{ formatCombo(combo) }}</div>
       </div>
       <div class="column">
         <h3>I</h3>
-        <div v-for="combo in sortedBoard.I" :key="combo">{{ formatCombo(combo) }}</div>
+        <div class="bingo-combos" v-for="combo in sortedBoard.I" :key="combo">{{ formatCombo(combo) }}</div>
       </div>
       <div class="column">
         <h3>N</h3>
-        <div v-for="combo in sortedBoard.N" :key="combo">{{ formatCombo(combo) }}</div>
+        <div class="bingo-combos" v-for="combo in sortedBoard.N" :key="combo">{{ formatCombo(combo) }}</div>
       </div>
       <div class="column">
         <h3>G</h3>
-        <div v-for="combo in sortedBoard.G" :key="combo">{{ formatCombo(combo) }}</div>
+        <div class="bingo-combos" v-for="combo in sortedBoard.G" :key="combo">{{ formatCombo(combo) }}</div>
       </div>
       <div class="column">
         <h3>O</h3>
-        <div v-for="combo in sortedBoard.O" :key="combo">{{ formatCombo(combo) }}</div>
+        <div class="bingo-combos" v-for="combo in sortedBoard.O" :key="combo">{{ formatCombo(combo) }}</div>
       </div>
     </div>
 
@@ -231,69 +237,125 @@ export default {
 <style scoped>
 .bingo-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column-reverse;
   justify-content: center;
   justify-content: space-evenly;
   align-items: center;
   padding: 20px;
   flex-wrap: wrap;
+  gap: 12px;
   /* border: 3px solid green; */
 }
+
+.inner-column {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  order: 1;
+}
+
+.name-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  max-width: 80vw;
+  gap: 35px;
+}
+
 .player-list, .current-combo, .previous-combo, .bingo-board {
-  max-width: 25%;
+  /* max-width: 30%; */
+  height: auto;
 }
 
 .player-list {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
   /* border: 2px solid red; */
 }
 
+.player-list h2 {
+  font-size: 35px;
+}
+
 .player{
   display: flex;
   flex-direction: row;
-  align-items: right;
+  justify-content: space-between;
+  line-height: 35px;
+  gap: 20px;
+  border-bottom: 1px solid #fff;
+  border-top: 1px solid #fff;
+  font-size: 22px;
+  padding: 10px;
+}
+
+.player-list button {
+  margin-top: 38px;
 }
 
 .current-combo {
   font-size: 2em;
   font-weight: bold;
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
 }
 
 .current-combo h2{
   font-size: 1.25em;
 }
 
+.inner-column button {
+  max-height: 90px;
+  max-width: 180px;
+  font-size: 22px;
+  font-weight: 300;
+  margin: 0 auto;
+}
+
 .previous-combo {
   font-size: 1.2em;
-  opacity: 0.6;
-  margin-bottom: 20px;
+  opacity: 0.8;
 }
 
 .bingo-board {
   display: flex;
-  justify-content: space-between;
-  width: 25%;
+  width: 100%;
   margin-bottom: 20px;
-  border-top: 2px solid #333;
-  border-left:2px solid #333;
+  border: 2px solid #333;
+  padding: 25px 0 25px 0;
+  flex: 2;
 }
 
 .column {
-  width: 15%;
+  width: 100%;
   border-right: 2px solid #333;
-  
 }
 
 .column h3 {
   text-align: center;
+  font-size: 2.5rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 40px;
+  margin-bottom: 35px;
 }
 
 .column div {
   text-align: center;
+}
+
+.bingo-combos {
+  margin: 14px;
+  font-size: 1.2em;
 }
 
 .called-combos {

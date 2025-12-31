@@ -1,7 +1,5 @@
 <template>
-  <!-- <img alt="Vue logo" src="./assets/logo.png"> -->
-  <HelloWorld/>
-  <BingoDashboard />
+  <router-view/>
 </template>
 
 <script>

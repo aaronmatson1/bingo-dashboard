@@ -1,99 +1,175 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require("socket.io");
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Set up initial data
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow all origins for dev
+    methods: ["GET", "POST"]
+  }
+});
+
+// Game State
 const allCombos = [];
-const calledCombos = ['FREE']; // Start with "Free Space" as the first combo
-let players = [
-  { name: 'McKinnley', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Aaron', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Jack', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Paige B', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Tate', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Lindsay', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Mason', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Olivia', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Nick', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Paige G', bingos: Array(7).fill(false), hasBingo: false },
-  { name: 'Matt', bingos: Array(7).fill(false), hasBingo: false }
-];
+const calledCombos = ['FREE'];
+let players = []; // Stores objects: { id, name, board, connected }
+
+// Generate all combos B1..O75
+function initializeCombos() {
+  const columns = {
+    B: [1, 15], I: [16, 30], N: [31, 45], G: [46, 60], O: [61, 75]
+  };
+  for (const [letter, range] of Object.entries(columns)) {
+    for (let i = range[0]; i <= range[1]; i++) {
+      // if (letter === 'N' && i === 38) continue; // Free space handled separately usually
+      allCombos.push(`${letter}${i}`);
+    }
+  }
+}
+initializeCombos();
+
+// Helper: Generate a Board
+function generateBoard() {
+  const board = { B: [], I: [], N: [], G: [], O: [] };
+  const ranges = {
+    B: [1, 15], I: [16, 30], N: [31, 45], G: [46, 60], O: [61, 75]
+  };
+
+  for (const [col, [min, max]] of Object.entries(ranges)) {
+    const nums = [];
+    while (nums.length < 5) {
+      const n = Math.floor(Math.random() * (max - min + 1)) + min;
+      if (!nums.includes(n)) nums.push(n);
+    }
+    board[col] = nums; // Keep raw numbers for simplicity? Or strings?
+    // Frontend expects numbers or strings? 
+    // Logic check: Frontend `getNumber` just reads it.
+    // Let's store raw numbers. Frontend format logic is minimal.
+  }
+  // N col middle is free, handled by frontend index 2 check, but let's put 'FREE' or 0 there?
+  // Frontend `isFreeSpace` checks checks index.
+  return board;
+}
+
+// Socket Logic
+io.on('connection', (socket) => {
+  console.log('A user connected:', socket.id);
+
+  socket.on('join', ({ name, playerId }) => {
+    console.log('Player joining:', name, playerId);
+
+    let player;
+
+    // Try to find existing player by stable ID
+    if (playerId) {
+      player = players.find(p => p.playerId === playerId);
+    }
+
+    // Also try by name if logic dictates (optional, prevents duplicate names)
+    if (!player && name) {
+      player = players.find(p => p.name === name);
+    }
+
+    if (player) {
+      // RECONNECTION
+      console.log(`Player ${player.name} reconnected.`);
+      player.socketId = socket.id; // Update current socket connection
+      if (!player.playerId) player.playerId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(); // Ensure has ID
+
+      socket.emit('welcome', {
+        board: player.board,
+        playerId: player.playerId,
+        bingos: player.bingos
+      });
+
+      // Update list for host (to show they are online? mainly just refreshing list)
+      io.emit('playerList', players);
+
+    } else {
+      // NEW PLAYER
+      if (!name) return; // Need a name
+
+      const newPlayerId = playerId || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString());
+
+      const board = generateBoard();
+      player = {
+        socketId: socket.id,
+        playerId: newPlayerId,
+        name: name,
+        board: board,
+        bingos: Array(7).fill(false),
+        isCursed: false
+      };
+
+      players.push(player);
+
+      // Send board to player
+      socket.emit('welcome', {
+        board,
+        playerId: newPlayerId
+      });
+
+      // Update Host
+      io.emit('playerJoined', player);
+      io.emit('playerList', players);
+    }
+  });
+
+  socket.on('playerBingo', ({ bingoCount }) => {
+    // Find player by socketId OR we could ask client to send playerId
+    const player = players.find(p => p.socketId === socket.id);
+    if (player) {
+      player.bingos = player.bingos.map((_, i) => i < bingoCount);
+      io.emit('playerUpdate', player);
+    }
+  });
+
+  socket.on('triggerCurse', ({ playerId }) => {
+    console.log('Curse triggered for:', playerId);
+    // Find player name
+    const player = players.find(p => p.playerId === playerId || p.id === playerId || p.socketId === playerId);
+    // Note: Host sends playerId (which might be the stable ID).
+    if (player) {
+      player.isCursed = true;
+      // Broadcast to ALL (Host and Players)
+      io.emit('curseTriggered', { playerId: player.playerId, playerName: player.name });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+    // Do NOT remove player, so they can reconnect.
+  });
+});
+
+// API Routes (Host Control)
 
 // Fetch all Players
 app.get('/players', (req, res) => {
   res.json(players);
 });
 
-// Add a new player
-app.post('/players', (req, res) => {
-  const { name } = req.body;
-  if (!name) {
-    return res.status(400).json({ error: 'Player name is required' });
-  }
-  const newPlayer = { name, bingos: [false, false, false, false, false, false, false], hasBingo: false };
-  players.push(newPlayer);
-  res.status(201).json(newPlayer);
-});
-
-
-// Generate all possible Bingo combinations
-function initializeCombos() {
-  const columns = {
-    B: [1, 15],
-    I: [16, 30],
-    N: [31, 45],
-    G: [46, 60],
-    O: [61, 75]
-  };
-
-  for (const [letter, range] of Object.entries(columns)) {
-    for (let i = range[0]; i <= range[1]; i++) {
-      // Skip adding the middle space (Free Space)
-      if (letter === 'N' && i === 38) continue; // Middle space in "N" column is "Free"
-      allCombos.push(`${letter}${i}`);
-    }
-  }
-
-  console.log('All Combos:', allCombos);
-}
-
-// Initialize combos on server start
-initializeCombos();
-
-// Root route - Confirm server is running
-app.get('/', (req, res) => {
-  res.send('Bingo API is running!');
-});
-
-// Endpoint to fetch the board
-app.get('/board', (req, res) => {
-  res.json({
-    calledCombos, // Combos that have been called
-    currentCombo: calledCombos[calledCombos.length - 1] // Last called combo
-  });
-});
-
-// Endpoint to draw a random combo
+// Draw random combo
 app.get('/random-combo', (req, res) => {
-  // Filter available combos
-  const availableCombos = allCombos.filter(combo => !calledCombos.includes(combo));
+  const availableCombos = allCombos.filter(c => !calledCombos.includes(c));
 
-  // Check if all combos are already called
   if (availableCombos.length === 0) {
-    return res.json({
-      message: 'All combos have been called!',
-      currentCombo: null
-    });
+    return res.json({ message: 'All done', currentCombo: null });
   }
 
-  // Select a random combo
   const randomIndex = Math.floor(Math.random() * availableCombos.length);
   const randomCombo = availableCombos[randomIndex];
 
-  // Add the new combo to calledCombos
   calledCombos.push(randomCombo);
+
+  // Broadcast to everyone!
+  io.emit('newCombo', randomCombo);
 
   res.json({
     message: 'New combo drawn',
@@ -102,8 +178,17 @@ app.get('/random-combo', (req, res) => {
   });
 });
 
-// Start the server
+
+// Endpoint to fetch the board state (for Host refresh)
+app.get('/board', (req, res) => {
+  res.json({
+    calledCombos,
+    currentCombo: calledCombos[calledCombos.length - 1]
+  });
+});
+
+// Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });

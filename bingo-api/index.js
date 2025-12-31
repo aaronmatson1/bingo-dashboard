@@ -7,7 +7,19 @@ app.use(express.json());
 // Set up initial data
 const allCombos = [];
 const calledCombos = ['FREE']; // Start with "Free Space" as the first combo
-let players = [];
+let players = [
+  { name: 'McKinnley', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Aaron', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Jack', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Paige B', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Tate', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Lindsay', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Mason', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Olivia', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Nick', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Paige G', bingos: Array(7).fill(false), hasBingo: false },
+  { name: 'Matt', bingos: Array(7).fill(false), hasBingo: false }
+];
 
 // Fetch all Players
 app.get('/players', (req, res) => {
@@ -20,7 +32,7 @@ app.post('/players', (req, res) => {
   if (!name) {
     return res.status(400).json({ error: 'Player name is required' });
   }
-  const newPlayer = { name, bingos: [false, false, false, false, false], hasBingo: false };
+  const newPlayer = { name, bingos: [false, false, false, false, false, false, false], hasBingo: false };
   players.push(newPlayer);
   res.status(201).json(newPlayer);
 });

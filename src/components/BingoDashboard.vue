@@ -5,7 +5,7 @@
       <h2>Players</h2>
       <div class="name-list">
         <div v-for="(player, index) in players" :key="index" class="player">
-        <span>{{ player.name }}</span>
+        <span>{{ player.name }} <span v-if="player.isCursed">👻</span></span>
         <div class="bingo-checkboxes">
           <label v-for="n in 7" :key="n">
             <input 
@@ -24,6 +24,11 @@
 
     <!-- Current Combo in the center -->
     <div class="inner-column">
+      <!-- Cursed Message -->
+      <div v-if="cursedMessage" class="cursed-message">
+        {{ cursedMessage }}
+      </div>
+
       <!-- Previous Combo to the right -->
       <div class="previous-combo">
         <h3>Previous Combo:<br/>{{ formatCombo(previousCombo) }}</h3>
@@ -84,10 +89,13 @@ export default {
     return {
       currentCombo: null, // Last drawn combo
       previousCombo: null, // Combo before the last one
-      board: {
+        board: {
         B: [], I: [], N: [], G: [], O: [] // Initialize the columns
       },
-      players: [] // List of players
+      players: [], // List of players
+      cursedItemClaimed: false, // Track if the cursed item has been claimed
+      cursedPlayer: null, // Track who has the cursed item
+      cursedMessage: null // Message to display when curse triggers
     };
   },
   computed: {
@@ -216,6 +224,56 @@ export default {
       player.hasBingo = true;
       this.triggerConfetti(true); // Big confetti for bingo
     }
+
+    // Cursed Item Logic
+    // Trigger if:
+    // 1. Not already claimed
+    // 2. All players have at least one checkmark
+    // 3. Game is in "later half" (more than 15 combos called)
+    // 4. Random chance (e.g., 10%)
+    const allPlayersHaveCheck = this.players.every(p => p.bingos.some(b => b));
+    
+    if (!this.cursedItemClaimed && allPlayersHaveCheck && this.sortedCalledCombos.length > 15 && Math.random() < 0.1) {
+      this.activateCurse(player);
+    }
+  },
+  activateCurse(player) {
+    this.cursedItemClaimed = true;
+    this.cursedPlayer = player.name;
+    player.isCursed = true; // Mark player as cursed in UI
+    this.triggerCursedConfetti();
+    
+    this.cursedMessage = `👻 A CURSE HAS BEFALLEN ${player.name.toUpperCase()}! 👻`;
+    setTimeout(() => {
+      this.cursedMessage = null; // Hide message after 5 seconds
+    }, 5000);
+  },
+  triggerCursedConfetti() {
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    (function frame() {
+      confetti({
+        particleCount: 5,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#000000', '#4B0082', '#800000'], // Black, Indigo, Maroon
+        shapes: ['circle', 'square'],
+      });
+      confetti({
+        particleCount: 5,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#000000', '#4B0082', '#800000'],
+        shapes: ['circle', 'square'],
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    })();
   },
   triggerConfetti(isBingo = false) {
     confetti({
@@ -370,5 +428,27 @@ export default {
 
 .called-combos li {
   font-size: 1.1em;
+}
+.cursed-message {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #ff0000;
+  padding: 20px;
+  font-size: 2em;
+  font-weight: bold;
+  border-radius: 10px;
+  z-index: 100;
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0% { transform: translate(-50%, 0) rotate(0deg); }
+  25% { transform: translate(-50%, 5px) rotate(5deg); }
+  50% { transform: translate(-50%, 0) rotate(0eg); }
+  75% { transform: translate(-50%, -5px) rotate(-5deg); }
+  100% { transform: translate(-50%, 0) rotate(0deg); }
 }
 </style>
